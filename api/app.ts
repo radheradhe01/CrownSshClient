@@ -30,7 +30,10 @@ dotenv.config()
 const app: express.Application = express()
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:7001'],
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:7001',
+    'http://localhost:5173' // Keep local dev
+  ],
   credentials: true
 }))
 app.use(express.json({ limit: '10mb' }))
@@ -60,7 +63,8 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "http://localhost:3001/api/auth/google/callback"
+    // Use the public-facing URL for the callback
+    callbackURL: process.env.GOOGLE_CALLBACK_URL || "/api/auth/google/callback"
   },
   (accessToken, refreshToken, profile, done) => {
     // In a real app, you'd save user to DB here

@@ -3,7 +3,10 @@ import { Terminal } from 'lucide-react';
 
 export default function Login() {
   const handleGoogleLogin = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:7002'}/api/auth/google`;
+    // Determine the API URL based on environment or window location
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:7002';
+      
+    window.location.href = `${apiUrl}/api/auth/google`;
   };
 
   return (

@@ -16,11 +16,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:7002}
+        VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:7002}
     ports:
       - "7001:80"
-    environment:
-      - VITE_API_URL=http://localhost:7002
-      - VITE_WS_URL=ws://localhost:7002
     networks:
       - app-network
     depends_on:
