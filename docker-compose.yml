@@ -1,5 +1,6 @@
 services:
   backend:
+    container_name: crownsshclient-backend
     build:
       context: .
       dockerfile: Dockerfile.backend

@@ -7,11 +7,16 @@ const connectDB = async () => {
       throw new Error('Mongo URI not found in .env');
     }
     
-    await mongoose.connect(mongoURI);
+    // Use connect options to increase timeout
+    await mongoose.connect(mongoURI, {
+      serverSelectionTimeoutMS: 15000, // 15 seconds
+      socketTimeoutMS: 45000, // 45 seconds
+    });
     console.log('MongoDB Connected...');
   } catch (err) {
     console.error('Failed to connect to MongoDB', err);
-    // process.exit(1); // Don't exit process in dev mode, maybe just log error
+    // Exit process on DB failure to let Docker restart it
+    process.exit(1); 
   }
 };
 
