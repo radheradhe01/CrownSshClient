@@ -1,6 +1,15 @@
 import { create } from 'zustand';
 import { VM, ExecutionLog, ExecutionStatus } from '../types';
 
+interface CacheEntry {
+  data: VM[];
+  total: number;
+  timestamp: number;
+}
+
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
+const vmCache = new Map<string, CacheEntry>();
+
 interface VMState {
   vms: VM[];
   selectedVmIds: string[];
@@ -20,7 +29,7 @@ interface VMState {
   updateStatus: (status: ExecutionStatus) => void;
   clearLogs: () => void;
   
-  fetchVMs: (envId?: string, page?: number) => Promise<void>;
+  fetchVMs: (envId?: string, page?: number, forceRefresh?: boolean) => Promise<void>;
   addVM: (vm: Omit<VM, 'id'>) => Promise<void>;
   updateVM: (id: string, vm: Partial<VM>) => Promise<void>;
   deleteVM: (id: string) => Promise<void>;
@@ -56,12 +65,27 @@ export const useVMStore = create<VMState>((set, get) => ({
 
   clearLogs: () => set({ logs: [], statuses: {} }),
 
-  fetchVMs: async (envId, page = 1) => {
-    const { vms } = get();
+  fetchVMs: async (envId, page = 1, forceRefresh = false) => {
+    const cacheKey = `${envId || 'all'}_page_${page}`;
     
-    // If loading first page, reset state
+    // Check cache first if not forcing refresh
+    if (!forceRefresh && page === 1) {
+      const cached = vmCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        set({ 
+          vms: cached.data, 
+          page: 1, 
+          hasMore: cached.data.length < cached.total,
+          isLoading: false,
+          selectedVmIds: [] 
+        });
+        return;
+      }
+    }
+
+    // Set loading state
     if (page === 1) {
-      set({ isLoading: true, selectedVmIds: [] }); // Clear selection on new env/search
+      set({ isLoading: true, selectedVmIds: [] });
     } else {
       set({ isLoading: true });
     }
@@ -75,6 +99,9 @@ export const useVMStore = create<VMState>((set, get) => ({
       const res = await fetch(url.toString());
       const { data, total } = await res.json();
       
+      // Update cache
+      vmCache.set(cacheKey, { data, total, timestamp: Date.now() });
+
       set((state) => {
         const newVMs = page === 1 ? data : [...state.vms, ...data];
         return {
@@ -98,54 +125,68 @@ export const useVMStore = create<VMState>((set, get) => ({
         body: JSON.stringify(vm),
       });
       const newVM = await res.json();
+      
+      // Optimistic update
       set((state) => ({ vms: [...state.vms, newVM] }));
       
-      // Update environment VM count
-      // This is a bit of a hack to update the environment store from the vm store
-      // ideally we would use a single store or an event bus
-      // but for now, we can just trigger a fetch of environments
-      // import { useEnvStore } from './envStore'; is not possible due to circular dependency
-      // so we will rely on the component to refresh the environments if needed
-      // OR we can export a function from envStore to update specific env
+      // Invalidate cache for this environment
+      vmCache.clear(); 
       
-      // Better approach: Since we can't easily access the other store here directly without circular deps,
-      // and we want real-time updates for the "Environment List" (which shows counts),
-      // we should consider if we can just re-fetch environments.
-      
-      // Actually, we can just dispatch a custom event that the environment selector listens to
       window.dispatchEvent(new Event('vm-added'));
-      
     } catch (error) {
       console.error('Failed to add VM', error);
     }
   },
 
   updateVM: async (id, vmData) => {
+    // Optimistic UI update
+    const previousVMs = get().vms;
+    set((state) => ({
+      vms: state.vms.map((v) => (v.id === id ? { ...v, ...vmData } : v)),
+    }));
+
     try {
       const res = await fetch(`${API_URL}/api/vms/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(vmData),
       });
+      
+      if (!res.ok) throw new Error('Failed to update');
+      
       const updatedVM = await res.json();
       set((state) => ({
         vms: state.vms.map((v) => (v.id === id ? updatedVM : v)),
       }));
+      
+      // Invalidate cache
+      vmCache.clear();
     } catch (error) {
       console.error('Failed to update VM', error);
+      // Rollback on error
+      set({ vms: previousVMs });
     }
   },
 
   deleteVM: async (id) => {
+    // Optimistic UI update
+    const previousVMs = get().vms;
+    set((state) => ({ 
+      vms: state.vms.filter((v) => v.id !== id),
+      selectedVmIds: state.selectedVmIds.filter((vmId) => vmId !== id)
+    }));
+
     try {
-      await fetch(`${API_URL}/api/vms/${id}`, { method: 'DELETE' });
-      set((state) => ({ 
-        vms: state.vms.filter((v) => v.id !== id),
-        selectedVmIds: state.selectedVmIds.filter((vmId) => vmId !== id)
-      }));
+      const res = await fetch(`${API_URL}/api/vms/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete');
+      
+      // Invalidate cache
+      vmCache.clear();
       window.dispatchEvent(new Event('vm-deleted'));
     } catch (error) {
       console.error('Failed to delete VM', error);
+      // Rollback on error
+      set({ vms: previousVMs });
     }
   },
 }));
