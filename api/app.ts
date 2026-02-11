@@ -43,7 +43,10 @@ app.use((req, res, next) => {
 });
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || true,
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:7001',
+    'http://localhost:5173' // Keep local dev
+  ],
   credentials: true
 }))
 app.use(express.json({ limit: '10mb' }))

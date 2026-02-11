@@ -15,7 +15,7 @@ export default function Login() {
 
   const handleGoogleLogin = () => {
     // Determine the API URL based on environment or window location
-    const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:7002';window.location.origin;
       
     window.location.href = `${apiUrl}/api/auth/google`;
   };

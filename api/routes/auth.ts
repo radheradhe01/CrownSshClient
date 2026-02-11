@@ -27,7 +27,7 @@ router.get('/google/callback', (req, res, next) => {
         if (saveErr) {
           console.error('Session save error:', saveErr);
         }
-        const frontendUrl = process.env.FRONTEND_URL || '';
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:7001';
         res.redirect(`${frontendUrl}/`);
       });
     });

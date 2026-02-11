@@ -37,7 +37,7 @@ interface VMState {
   deleteVM: (id: string) => Promise<void>;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:7002';
 
 export const useVMStore = create<VMState>((set, get) => ({
   vms: [],
@@ -120,12 +120,12 @@ export const useVMStore = create<VMState>((set, get) => ({
     }
 
     try {
-      const params = new URLSearchParams();
-      if (envId) params.append('environmentId', envId);
-      params.append('page', page.toString());
-      params.append('limit', '20');
+      const url = new URL(`${API_URL}/api/vms`);
+      if (envId) url.searchParams.append('environmentId', envId);
+      url.searchParams.append('page', page.toString());
+      url.searchParams.append('limit', '20');
 
-      const res = await fetch(`${API_URL}/api/vms?${params.toString()}`);
+      const res = await fetch(url.toString());
       const { data, total } = await res.json();
       
       // Update cache
