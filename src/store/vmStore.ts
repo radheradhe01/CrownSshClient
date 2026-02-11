@@ -95,6 +95,13 @@ export const useVMStore = create<VMState>((set, get) => ({
   setActiveTerminalVmId: (id) => set({ activeTerminalVmId: id }),
 
   fetchVMs: async (envId, page = 1, forceRefresh = false) => {
+    // If switching environments (and not just loading more pages), clear current list to prevent leaks
+    if (page === 1) {
+       set({ vms: [], isLoading: true, selectedVmIds: [] });
+    } else {
+       set({ isLoading: true });
+    }
+
     const cacheKey = `${envId || 'all'}_page_${page}`;
     
     // Check cache first if not forcing refresh
@@ -112,13 +119,6 @@ export const useVMStore = create<VMState>((set, get) => ({
       }
     }
 
-    // Set loading state
-    if (page === 1) {
-      set({ isLoading: true, selectedVmIds: [] });
-    } else {
-      set({ isLoading: true });
-    }
-
     try {
       const params = new URLSearchParams();
       if (envId) params.append('environmentId', envId);
@@ -132,11 +132,17 @@ export const useVMStore = create<VMState>((set, get) => ({
       vmCache.set(cacheKey, { data, total, timestamp: Date.now() });
 
       set((state) => {
+        // If we are on page 1, strictly replace. If paging, append.
+        // Safety check: ensure we don't duplicate VMs if rapid switching happens
         const newVMs = page === 1 ? data : [...state.vms, ...data];
+        
+        // Remove duplicates just in case
+        const uniqueVMs = Array.from(new Map(newVMs.map(item => [item.id, item])).values()) as VM[];
+
         return {
-          vms: newVMs,
+          vms: uniqueVMs,
           page,
-          hasMore: newVMs.length < total,
+          hasMore: uniqueVMs.length < total,
           isLoading: false
         };
       });

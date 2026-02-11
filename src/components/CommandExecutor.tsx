@@ -104,6 +104,8 @@ export const CommandExecutor: React.FC = () => {
     } catch (error) {
       console.error('Execution failed', error);
     } finally {
+      // Keep isExecuting true for a bit or rely on logs?
+      // Actually, we want to re-enable the button if needed, but usually we just wait for logs.
       setIsExecuting(false);
     }
   };
