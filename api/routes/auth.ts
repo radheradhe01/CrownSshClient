@@ -21,9 +21,15 @@ router.get('/google/callback', (req, res, next) => {
         console.error('Passport login error:', loginErr);
         return res.redirect(`${process.env.FRONTEND_URL || ''}/login?error=${encodeURIComponent(loginErr.message || 'Login failed')}`);
       }
-      // Successful authentication, redirect home.
-      const frontendUrl = process.env.FRONTEND_URL || '';
-      res.redirect(`${frontendUrl}/`);
+      
+      // Explicitly save session before redirecting to avoid race conditions with MongoDB store
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error('Session save error:', saveErr);
+        }
+        const frontendUrl = process.env.FRONTEND_URL || '';
+        res.redirect(`${frontendUrl}/`);
+      });
     });
   })(req, res, next);
 });

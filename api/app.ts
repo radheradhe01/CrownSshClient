@@ -12,7 +12,6 @@ import session from 'express-session'
 import MongoStore from 'connect-mongo'
 import passport from 'passport'
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20'
-import compression from 'compression'
 import logger from './utils/logger.js'
 
 import authRoutes from './routes/auth.js'
@@ -24,23 +23,24 @@ import executionRoutes from './routes/execution.js'
 // const __filename = fileURLToPath(import.meta.url)
 // const __dirname = path.dirname(__filename)
 
-// load env
-// dotenv.config() is now called in server.ts
-
 const app: express.Application = express()
 
-// Security Middleware
-// app.use(helmet())
-
-// Gzip Compression
-app.use(compression())
-
 // Trust proxy (required for Nginx/Cloudflare and secure cookies)
+app.set('trust proxy', true);
+
+console.log('>>> App Initializing with FRONTEND_URL:', process.env.FRONTEND_URL);
+
 app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.originalUrl} - ${req.ip}`);
+  // Debug headers for session troubleshooting
+  if (req.url.includes('/auth/me')) {
+    logger.info(`Session Debug [${req.method} ${req.url}]:`);
+    logger.info(`- Proto: ${req.protocol}`);
+    logger.info(`- Secure: ${req.secure}`);
+    logger.info(`- Cookies: ${req.headers.cookie ? 'Present' : 'None'}`);
+    logger.info(`- X-Forwarded-Proto: ${req.headers['x-forwarded-proto']}`);
+  }
   next();
 });
-app.set('trust proxy', 1);
 
 app.use(cors({
   origin: process.env.FRONTEND_URL || true,
