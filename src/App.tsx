@@ -1,11 +1,12 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
+import PinEntry from "@/pages/PinEntry";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect } from "react";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading, error, checkAuth } = useAuthStore();
+  const { user, isLoading, error, checkAuth, isPinVerified } = useAuthStore();
   
   useEffect(() => {
     checkAuth();
@@ -29,10 +30,14 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // For development, we can bypass auth if needed, but here we enforce it.
-  // If user is null, redirect to login.
+  // Check Auth first
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Then Check PIN
+  if (!isPinVerified) {
+    return <PinEntry />;
   }
 
   return <>{children}</>;

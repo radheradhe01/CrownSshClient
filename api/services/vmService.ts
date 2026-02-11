@@ -10,6 +10,7 @@ export interface VM {
   password?: string;
   port: number;
   environmentId?: string;
+  isPinned?: boolean;
 }
 
 export const vmService = {
@@ -35,7 +36,7 @@ export const vmService = {
       if (search && page === 1) {
         const vms = await VMModel.find(query)
           .select({ score: { $meta: "textScore" } })
-          .sort({ score: { $meta: "textScore" } })
+          .sort({ isPinned: -1, score: { $meta: "textScore" } }) // Sort by pinned first, then relevance
           .limit(limit);
         
         const mappedVMs = vms.map(v => {
@@ -47,14 +48,18 @@ export const vmService = {
             username: obj.username,
             password: obj.password,
             port: obj.port,
-            environmentId: obj.environmentId
+            environmentId: obj.environmentId,
+            isPinned: obj.isPinned
           };
         });
         return { data: mappedVMs, total: mappedVMs.length };
       }
 
       const [vms, total] = await Promise.all([
-        VMModel.find(query).skip(skip).limit(limit),
+        VMModel.find(query)
+          .sort({ isPinned: -1, _id: -1 }) // Sort by pinned first, then newest
+          .skip(skip)
+          .limit(limit),
         VMModel.countDocuments(query)
       ]);
       
@@ -67,7 +72,8 @@ export const vmService = {
           username: obj.username,
           password: obj.password,
           port: obj.port,
-          environmentId: obj.environmentId
+          environmentId: obj.environmentId,
+          isPinned: obj.isPinned
         };
       });
 
@@ -113,7 +119,8 @@ export const vmService = {
       username: obj.username,
       password: obj.password,
       port: obj.port,
-      environmentId: obj.environmentId
+      environmentId: obj.environmentId,
+      isPinned: obj.isPinned
     };
   },
 
@@ -129,7 +136,8 @@ export const vmService = {
       username: obj.username,
       password: obj.password,
       port: obj.port,
-      environmentId: obj.environmentId
+      environmentId: obj.environmentId,
+      isPinned: obj.isPinned
     };
   },
 

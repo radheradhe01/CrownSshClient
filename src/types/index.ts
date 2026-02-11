@@ -6,6 +6,7 @@ export interface VM {
   password?: string;
   port: number;
   environmentId?: string;
+  isPinned?: boolean;
 }
 
 export interface Environment {

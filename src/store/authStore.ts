@@ -5,16 +5,20 @@ interface AuthState {
   user: User | null;
   isLoading: boolean;
   error: string | null;
+  isPinVerified: boolean;
   checkAuth: () => Promise<void>;
   logout: () => Promise<void>;
+  verifyPin: (pin: string) => boolean;
 }
 
 const API_URL = import.meta.env.VITE_API_URL || '';
+const REQUIRED_PIN = '676869';
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isLoading: true,
   error: null,
+  isPinVerified: false,
 
   checkAuth: async () => {
     try {
@@ -30,14 +34,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       } else if (res.status === 401 || res.status === 403) {
         set({ user: null, isLoading: false });
       } else {
-        // For 500 or other errors, keep user as is (or null) but set error
-        // If we were already logged in, we probably want to stay logged in visually or show a warning?
-        // But on initial load, user is null.
         set({ error: `Server error: ${res.status}`, isLoading: false });
       }
     } catch (error) {
       console.error('Auth check failed', error);
-      // Network error or other fetch failure
       set({ error: 'Connection failed', isLoading: false });
     }
   },
@@ -48,9 +48,17 @@ export const useAuthStore = create<AuthState>((set) => ({
         method: 'POST',
         credentials: 'include'
       });
-      set({ user: null });
+      set({ user: null, isPinVerified: false });
     } catch (error) {
       console.error('Logout failed', error);
     }
+  },
+
+  verifyPin: (pin: string) => {
+    if (pin === REQUIRED_PIN) {
+      set({ isPinVerified: true });
+      return true;
+    }
+    return false;
   }
 }));

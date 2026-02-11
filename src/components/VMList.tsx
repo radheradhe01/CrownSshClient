@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useVMStore } from '../store/vmStore';
 import { useEnvStore } from '../store/envStore';
-import { Plus, Trash2, Server, CheckSquare, Square, Edit2, X, Loader } from 'lucide-react';
+import { Plus, Trash2, Server, CheckSquare, Square, Edit2, X, Loader, Pin } from 'lucide-react';
 import { VM } from '../types';
 
 export const VMList: React.FC = () => {
@@ -154,7 +154,10 @@ export const VMList: React.FC = () => {
             onClick={() => toggleVMSelection(vm.id)}
           >
             <div className="flex items-center gap-3 overflow-hidden">
-              {selectedVmIds.includes(vm.id) ? (
+              {/* Always show Pin if pinned, otherwise show selection checkbox */}
+              {vm.isPinned && !selectedVmIds.includes(vm.id) ? (
+                 <Pin size={16} className="text-yellow-500 flex-shrink-0" fill="currentColor" />
+              ) : selectedVmIds.includes(vm.id) ? (
                 <CheckSquare size={16} className="text-blue-500 flex-shrink-0" />
               ) : (
                 <Square size={16} className="text-zinc-600 flex-shrink-0" />
@@ -164,7 +167,17 @@ export const VMList: React.FC = () => {
                 <div className="text-xs text-zinc-500 truncate">{vm.username}@{vm.ip}</div>
               </div>
             </div>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+               <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  updateVM(vm.id, { isPinned: !vm.isPinned });
+                }}
+                className={`p-1 hover:text-yellow-400 transition-colors ${vm.isPinned ? 'text-yellow-500 opacity-100' : 'text-zinc-500'}`}
+                title={vm.isPinned ? "Unpin VM" : "Pin VM"}
+              >
+                <Pin size={14} fill={vm.isPinned ? "currentColor" : "none"} />
+              </button>
                <button
                 onClick={(e) => handleEditClick(vm, e)}
                 className="p-1 hover:text-blue-400 transition-colors text-zinc-500"

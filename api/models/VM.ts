@@ -16,6 +16,7 @@ const VMSchema: Schema = new Schema({
   password: { type: String },
   port: { type: Number, default: 22 },
   environmentId: { type: String, index: true }, // Indexed for performance
+  isPinned: { type: Boolean, default: false },
 });
 
 // Text index for search
