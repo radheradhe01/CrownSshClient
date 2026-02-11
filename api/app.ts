@@ -8,12 +8,10 @@ import express, {
   type NextFunction,
 } from 'express'
 import cors from 'cors'
-import dotenv from 'dotenv'
 import session from 'express-session'
 import MongoStore from 'connect-mongo'
 import passport from 'passport'
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20'
-import helmet from 'helmet'
 import compression from 'compression'
 import logger from './utils/logger.js'
 
@@ -27,12 +25,12 @@ import executionRoutes from './routes/execution.js'
 // const __dirname = path.dirname(__filename)
 
 // load env
-dotenv.config()
+// dotenv.config() is now called in server.ts
 
 const app: express.Application = express()
 
 // Security Middleware
-app.use(helmet())
+// app.use(helmet())
 
 // Gzip Compression
 app.use(compression())
@@ -53,6 +51,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
 // Session config
 app.use(session({
+  proxy: true, // Required for secure cookies behind a proxy
   secret: process.env.SESSION_SECRET || 'keyboard cat',
   resave: false,
   saveUninitialized: false,
@@ -65,7 +64,7 @@ app.use(session({
   cookie: { 
     secure: process.env.NODE_ENV === 'production' || !!process.env.FRONTEND_URL?.startsWith('https'),
     maxAge: 1000 * 60 * 60 * 24 * 14, // 14 days
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    sameSite: 'lax' // Lax is much more stable than 'none' for same-domain setups
   }
 }));
 
