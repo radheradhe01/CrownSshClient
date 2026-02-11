@@ -30,11 +30,11 @@ export const CommandExecutor: React.FC = () => {
     let wsUrl = import.meta.env.VITE_WS_URL;
     
     if (!wsUrl) {
-      // Fallback: Construct URL based on current window location
-      // Assuming backend is on port 7002 on the same hostname
+      // Best Practice: Connect through the same origin and port using the proxied /api/ path
+      // This ensures WebSocket works even behind firewalls or reverse proxies
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const hostname = window.location.hostname;
-      wsUrl = `${protocol}//${hostname}:7002`;
+      const host = window.location.host; // Includes hostname and port (e.g. 1.2.3.4:7001)
+      wsUrl = `${protocol}//${host}/api/`;
     }
 
     console.log(`Connecting to WebSocket at: ${wsUrl}`);

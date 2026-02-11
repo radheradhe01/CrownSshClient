@@ -23,15 +23,35 @@ export const vmService = {
       }
       
       if (search) {
-        const regex = new RegExp(search, 'i');
-        query.$or = [
-          { name: regex },
-          { ip: regex },
-          { username: regex }
-        ];
+        // Use MongoDB Text Search for high performance
+        // This uses the text index we created on name, ip, and username
+        query.$text = { $search: search };
       }
 
       const skip = (page - 1) * limit;
+
+      // For search, we can skip the expensive countDocuments for better speed 
+      // if we only care about showing the first page of results in the dropdown
+      if (search && page === 1) {
+        const vms = await VMModel.find(query)
+          .select({ score: { $meta: "textScore" } })
+          .sort({ score: { $meta: "textScore" } })
+          .limit(limit);
+        
+        const mappedVMs = vms.map(v => {
+          const obj = v.toObject();
+          return {
+            id: obj._id.toString(),
+            name: obj.name,
+            ip: obj.ip,
+            username: obj.username,
+            password: obj.password,
+            port: obj.port,
+            environmentId: obj.environmentId
+          };
+        });
+        return { data: mappedVMs, total: mappedVMs.length };
+      }
 
       const [vms, total] = await Promise.all([
         VMModel.find(query).skip(skip).limit(limit),

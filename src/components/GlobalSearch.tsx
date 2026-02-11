@@ -5,6 +5,9 @@ import { VM } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:7002';
 
+// Simple in-memory search cache
+const searchCache = new Map<string, VM[]>();
+
 export const GlobalSearch: React.FC = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<VM[]>([]);
@@ -26,13 +29,22 @@ export const GlobalSearch: React.FC = () => {
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
-      if (query.trim().length > 1) {
+      const trimmedQuery = query.trim();
+      if (trimmedQuery.length > 1) {
+        // Check cache first
+        if (searchCache.has(trimmedQuery)) {
+          setResults(searchCache.get(trimmedQuery)!);
+          setIsOpen(true);
+          return;
+        }
+
         setLoading(true);
         try {
-          const res = await fetch(`${API_URL}/api/vms?search=${encodeURIComponent(query)}`);
+          const res = await fetch(`${API_URL}/api/vms?search=${encodeURIComponent(trimmedQuery)}`);
           if (res.ok) {
             const { data } = await res.json();
             setResults(data);
+            searchCache.set(trimmedQuery, data); // Cache results
             setIsOpen(true);
           }
         } catch (error) {
