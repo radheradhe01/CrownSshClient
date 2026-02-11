@@ -26,22 +26,17 @@ export const CommandExecutor: React.FC = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Determine WS URL dynamically to support remote deployments
-    let wsUrl = import.meta.env.VITE_WS_URL;
-    
-    if (!wsUrl) {
-      // Best Practice: Connect through the same origin and port using the proxied /api/ path
-      // This ensures WebSocket works even behind firewalls or reverse proxies
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host; // Includes hostname and port (e.g. 1.2.3.4:7001)
-      wsUrl = `${protocol}//${host}/api/`;
-    }
+    // Direct connection to backend port 7002 for WebSocket
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const hostname = window.location.hostname;
+    const wsUrl = `${protocol}//${hostname}:7002`;
 
     console.log(`Connecting to WebSocket at: ${wsUrl}`);
     const ws = new WebSocket(wsUrl);
     
     ws.onopen = () => {
       console.log('WebSocket connection established');
+      addLog({ vmId: 'system', type: 'info', data: '>>> Connected to backend terminal server.\n', timestamp: Date.now() });
     };
 
     ws.onmessage = (event) => {
@@ -59,10 +54,12 @@ export const CommandExecutor: React.FC = () => {
 
     ws.onerror = (error) => {
       console.error('WebSocket error:', error);
+      addLog({ vmId: 'system', type: 'error', data: '>>> Connection error. Check if backend is running on port 7002.\n', timestamp: Date.now() });
     };
 
     ws.onclose = () => {
       console.log('WebSocket connection closed');
+      addLog({ vmId: 'system', type: 'info', data: '>>> Connection lost. Trying to reconnect...\n', timestamp: Date.now() });
     };
 
     return () => {
