@@ -4,10 +4,12 @@ import { useEnvStore } from '../store/envStore';
 import { Play, Terminal as TerminalIcon, RotateCcw } from 'lucide-react';
 
 export const CommandExecutor: React.FC = () => {
-  const { selectedVmIds, logs, statuses, addLog, updateStatus, clearLogs } = useVMStore();
+  const { vms, selectedVmIds, activeTerminalVmId, setActiveTerminalVmId, logs, statuses, addLog, updateStatus, clearLogs } = useVMStore();
   const { environments, selectedEnvId } = useEnvStore();
   
   const currentEnv = environments.find(e => e.id === selectedEnvId);
+  const selectedVMs = vms.filter(v => selectedVmIds.includes(v.id));
+  const activeVM = selectedVMs.find(v => v.id === activeTerminalVmId);
   // Default to global default if env has no command, or empty string if global is missing (safety)
   const GLOBAL_DEFAULT = "echo '{{PASSWORD}}' | su -c 'cd /usr/local/freeswitch/bin/ && ps aux | grep freeswitch && pkill -9 freeswitch && sync && echo 3 > /proc/sys/vm/drop_caches && ./freeswitch'";
   const DEFAULT_COMMAND = currentEnv?.command || GLOBAL_DEFAULT;
@@ -101,7 +103,7 @@ export const CommandExecutor: React.FC = () => {
     <div className="flex flex-col h-full bg-zinc-950 text-zinc-100 flex-1">
       <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
         <h2 className="text-lg font-semibold flex items-center gap-2">
-          <TerminalIcon size={20} /> Execution
+          <TerminalIcon size={20} /> {activeVM ? `Terminal: ${activeVM.name}` : 'Execution'}
         </h2>
         <div className="flex gap-2">
           <button
@@ -151,34 +153,66 @@ export const CommandExecutor: React.FC = () => {
       </div>
 
       <div className="flex-1 flex flex-col min-h-0 bg-black border-t border-zinc-800">
-        <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-900 bg-zinc-900/50">
-          <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Terminal Output</span>
-          <div className="flex gap-4">
-            {Object.entries(statuses).map(([vmId, status]) => (
-              <div key={vmId} className="flex items-center gap-1.5 text-xs">
-                <div className={`w-2 h-2 rounded-full ${
-                  status === 'running' ? 'bg-blue-500 animate-pulse' :
-                  status === 'success' ? 'bg-green-500' :
-                  status === 'error' ? 'bg-red-500' : 'bg-zinc-600'
-                }`} />
-                <span className="text-zinc-400">{status}</span>
-              </div>
-            ))}
+        <div className="flex flex-col border-b border-zinc-900 bg-zinc-900/50">
+          <div className="flex items-center justify-between px-4 py-2">
+            <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Terminal Output</span>
+            <div className="flex gap-4">
+              {selectedVMs.map((vm) => (
+                <div key={vm.id} className="flex items-center gap-1.5 text-xs">
+                  <div className={`w-2 h-2 rounded-full ${
+                    statuses[vm.id] === 'running' ? 'bg-blue-500 animate-pulse' :
+                    statuses[vm.id] === 'success' ? 'bg-green-500' :
+                    statuses[vm.id] === 'error' ? 'bg-red-500' : 'bg-zinc-600'
+                  }`} />
+                  <span className="text-zinc-400">{statuses[vm.id] || 'pending'}</span>
+                </div>
+              ))}
+            </div>
           </div>
+          
+          {/* Terminal Tabs */}
+          {selectedVMs.length > 0 && (
+            <div className="flex overflow-x-auto px-2 border-t border-zinc-800/50 no-scrollbar">
+              {selectedVMs.map((vm) => (
+                <button
+                  key={vm.id}
+                  onClick={() => setActiveTerminalVmId(vm.id)}
+                  className={`px-4 py-2 text-xs font-medium whitespace-nowrap border-b-2 transition-colors ${
+                    activeTerminalVmId === vm.id
+                      ? 'border-blue-500 text-blue-400 bg-blue-500/5'
+                      : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={`w-1.5 h-1.5 rounded-full ${
+                      statuses[vm.id] === 'running' ? 'bg-blue-500 animate-pulse' :
+                      statuses[vm.id] === 'success' ? 'bg-green-500' :
+                      statuses[vm.id] === 'error' ? 'bg-red-500' : 'bg-zinc-600'
+                    }`} />
+                    {vm.name}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         
         <div 
           ref={scrollRef}
           className="flex-1 overflow-y-auto p-4 font-mono text-xs space-y-1 selection:bg-blue-500/30"
         >
-          {logs.length === 0 && (
-            <div className="text-zinc-700 italic">No output yet. Select VMs and click Run.</div>
+          {logs.filter(log => log.vmId === activeTerminalVmId || log.vmId === 'system').length === 0 && (
+            <div className="text-zinc-700 italic">No output yet for this VM. Select VMs and click Run.</div>
           )}
-          {logs.map((log, i) => (
-            <div key={i} className="whitespace-pre-wrap break-all border-l-2 border-zinc-800 pl-3 py-0.5">
-              {log.data}
-            </div>
-          ))}
+          {logs
+            .filter(log => log.vmId === activeTerminalVmId || log.vmId === 'system')
+            .map((log, i) => (
+              <div key={i} className={`whitespace-pre-wrap break-all border-l-2 pl-3 py-0.5 ${
+                log.vmId === 'system' ? 'border-zinc-700 text-zinc-500' : 'border-zinc-800'
+              }`}>
+                {log.data}
+              </div>
+            ))}
         </div>
       </div>
     </div>

@@ -13,6 +13,7 @@ const vmCache = new Map<string, CacheEntry>();
 interface VMState {
   vms: VM[];
   selectedVmIds: string[];
+  activeTerminalVmId: string | null;
   logs: ExecutionLog[];
   statuses: Record<string, 'pending' | 'running' | 'success' | 'error'>;
   
@@ -28,6 +29,7 @@ interface VMState {
   addLog: (log: ExecutionLog) => void;
   updateStatus: (status: ExecutionStatus) => void;
   clearLogs: () => void;
+  setActiveTerminalVmId: (id: string | null) => void;
   
   fetchVMs: (envId?: string, page?: number, forceRefresh?: boolean) => Promise<void>;
   addVM: (vm: Omit<VM, 'id'>) => Promise<void>;
@@ -40,6 +42,7 @@ const API_URL = import.meta.env.VITE_API_URL || '';
 export const useVMStore = create<VMState>((set, get) => ({
   vms: [],
   selectedVmIds: [],
+  activeTerminalVmId: null,
   logs: [],
   statuses: {},
   page: 1,
@@ -48,14 +51,38 @@ export const useVMStore = create<VMState>((set, get) => ({
 
   setVMs: (vms) => set({ vms }),
   
-  toggleVMSelection: (id) => set((state) => ({
-    selectedVmIds: state.selectedVmIds.includes(id)
+  toggleVMSelection: (id) => set((state) => {
+    const newSelected = state.selectedVmIds.includes(id)
       ? state.selectedVmIds.filter((vmId) => vmId !== id)
-      : [...state.selectedVmIds, id]
-  })),
+      : [...state.selectedVmIds, id];
+    
+    // Auto-update active terminal
+    let newActive = state.activeTerminalVmId;
+    if (newSelected.length === 0) {
+      newActive = null;
+    } else if (!newSelected.includes(id) && state.activeTerminalVmId === id) {
+      // If we just deselected the active terminal, switch to another selected VM
+      newActive = newSelected[0];
+    } else if (newSelected.length === 1 && !state.activeTerminalVmId) {
+      // If it's the first selection, make it active
+      newActive = id;
+    }
 
-  selectAllVMs: () => set((state) => ({ selectedVmIds: state.vms.map(v => v.id) })),
-  deselectAllVMs: () => set({ selectedVmIds: [] }),
+    return { 
+      selectedVmIds: newSelected,
+      activeTerminalVmId: newActive
+    };
+  }),
+
+  selectAllVMs: () => set((state) => {
+    const allIds = state.vms.map(v => v.id);
+    return { 
+      selectedVmIds: allIds,
+      activeTerminalVmId: state.activeTerminalVmId || allIds[0] || null
+    };
+  }),
+
+  deselectAllVMs: () => set({ selectedVmIds: [], activeTerminalVmId: null }),
 
   addLog: (log) => set((state) => ({ logs: [...state.logs, log] })),
   
@@ -64,6 +91,8 @@ export const useVMStore = create<VMState>((set, get) => ({
   })),
 
   clearLogs: () => set({ logs: [], statuses: {} }),
+
+  setActiveTerminalVmId: (id) => set({ activeTerminalVmId: id }),
 
   fetchVMs: async (envId, page = 1, forceRefresh = false) => {
     const cacheKey = `${envId || 'all'}_page_${page}`;
