@@ -126,7 +126,7 @@ export const CommandExecutor: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-zinc-950 text-zinc-100 flex-1">
+    <div className="flex flex-col h-full bg-zinc-950 text-zinc-100 flex-1 min-w-0">
       <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <TerminalIcon size={20} /> {activeVM ? `Terminal: ${activeVM.name}` : 'Execution'}
@@ -178,8 +178,8 @@ export const CommandExecutor: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col min-h-0 bg-black border-t border-zinc-800">
-        <div className="flex flex-col border-b border-zinc-900 bg-zinc-900/50">
+      <div className="flex-1 flex flex-col min-h-0 bg-black border-t border-zinc-800 min-w-0">
+        <div className="flex flex-col border-b border-zinc-900 bg-zinc-900/50 w-full">
           <div className="flex items-center justify-between px-4 py-2">
             <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Terminal Output</span>
             <div className="flex gap-4">
@@ -198,7 +198,7 @@ export const CommandExecutor: React.FC = () => {
           
           {/* Terminal Tabs */}
           {selectedVMs.length > 0 && (
-            <div className="flex overflow-x-auto px-2 border-t border-zinc-800/50 no-scrollbar">
+            <div className="flex overflow-x-auto px-2 border-t border-zinc-800/50 no-scrollbar w-full">
               {selectedVMs.map((vm) => (
                 <button
                   key={vm.id}
