@@ -4,6 +4,7 @@ import { useEnvStore } from '../store/envStore';
 import { Plus, Trash2, Server, CheckSquare, Square, Edit2, X, Loader, Pin } from 'lucide-react';
 import { VM } from '../types';
 
+
 export const VMList: React.FC = () => {
   // Optimize selector to prevent unnecessary re-renders
   const vms = useVMStore(state => state.vms);
