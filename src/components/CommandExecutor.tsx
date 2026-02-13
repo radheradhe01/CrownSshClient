@@ -75,11 +75,12 @@ export const CommandExecutor: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-zinc-950 text-zinc-100 flex-1">
-      <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <TerminalIcon size={20} /> {activeVM ? `Terminal: ${activeVM.name}` : 'Execution'}
+      <div className="p-4 border-b border-zinc-800 flex items-center justify-between gap-4">
+        <h2 className="text-lg font-semibold flex items-center gap-2 min-w-0">
+          <TerminalIcon size={20} className="flex-shrink-0" /> 
+          <span className="truncate">{activeVM ? `Terminal: ${activeVM.name}` : 'Execution'}</span>
         </h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-shrink-0">
           <button
             onClick={clearLogs}
             className="flex items-center gap-2 px-3 py-1.5 text-sm bg-zinc-800 hover:bg-zinc-700 rounded transition-colors"

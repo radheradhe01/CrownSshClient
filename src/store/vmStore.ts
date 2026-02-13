@@ -130,11 +130,16 @@ export const useVMStore = create<VMState>((set, get) => ({
       }
     }
 
-    // Cancel previous request if active
-    if (currentFetchController) {
-      currentFetchController.abort();
+    // Cancel previous request ONLY if starting a new fresh load (page 1)
+    if (page === 1) {
+      if (currentFetchController) {
+        currentFetchController.abort();
+      }
+      currentFetchController = new AbortController();
     }
-    currentFetchController = new AbortController();
+    
+    // If paging, use the existing controller or create a new one if none exists (unlikely but safe)
+    const signal = page === 1 ? currentFetchController!.signal : undefined;
 
     try {
       const params = new URLSearchParams();
@@ -143,7 +148,7 @@ export const useVMStore = create<VMState>((set, get) => ({
       params.append('limit', '20');
 
       const res = await fetch(`${API_URL}/api/vms?${params.toString()}`, {
-        signal: currentFetchController.signal
+        signal
       });
       const { data, total } = await res.json();
       
