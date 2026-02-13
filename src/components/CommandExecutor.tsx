@@ -141,9 +141,9 @@ export const CommandExecutor: React.FC = () => {
           <button
             onClick={handleExecute}
             disabled={isExecuting || selectedVmIds.length === 0}
-            className="flex items-center gap-2 px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-800 disabled:text-zinc-500 rounded transition-colors"
+            className="flex items-center gap-2 px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-800 disabled:text-zinc-500 rounded transition-colors whitespace-nowrap"
           >
-            <Play size={16} /> {isExecuting ? 'Running...' : `Run on ${selectedVmIds.length} VMs`}
+            <Play size={16} /> {isExecuting ? 'Running...' : `Run (${selectedVmIds.length})`}
           </button>
         </div>
       </div>

@@ -82,12 +82,35 @@ export const VMList: React.FC = () => {
     resetForm();
   };
 
+  // Derived state for selection toggle
+  const allSelected = vms.length > 0 && selectedVmIds.length === vms.length;
+
+  const handleToggleSelectAll = () => {
+    if (allSelected) {
+      deselectAllVMs();
+    } else {
+      selectAllVMs();
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-zinc-900 text-zinc-100 border-b md:border-b-0 md:border-r border-zinc-800 w-full md:w-80">
       <div className="p-4 border-b border-zinc-800 flex justify-between items-center">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <Server size={20} /> VMs
-        </h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Server size={20} /> VMs
+          </h2>
+          {/* Smart Selection Toggle */}
+          {vms.length > 0 && (
+            <button
+              onClick={handleToggleSelectAll}
+              className="text-zinc-500 hover:text-blue-400 transition-colors"
+              title={allSelected ? "Unselect All" : "Select All"}
+            >
+              {allSelected ? <CheckSquare size={18} className="text-blue-500" /> : <Square size={18} />}
+            </button>
+          )}
+        </div>
         <button
           onClick={() => { resetForm(); setIsEditing(!isEditing); }}
           className={`p-1 rounded transition-colors ${isEditing && !editingId ? 'bg-zinc-700 text-white' : 'hover:bg-zinc-800'}`}
@@ -150,11 +173,6 @@ export const VMList: React.FC = () => {
           </div>
         </form>
       )}
-
-      <div className="p-2 border-b border-zinc-800 flex gap-2">
-        <button onClick={selectAllVMs} className="text-xs text-zinc-400 hover:text-white">Select All</button>
-        <button onClick={deselectAllVMs} className="text-xs text-zinc-400 hover:text-white">None</button>
-      </div>
 
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {vms.map((vm) => (
