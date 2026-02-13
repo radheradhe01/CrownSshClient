@@ -10,8 +10,7 @@ export const sshService = {
       // We escape single quotes because the default command uses '{{PASSWORD}}'
       // If the user's command doesn't use quotes around {{PASSWORD}}, this might be weird, 
       // but for the specific use case of echo '{{PASSWORD}}', we need to escape single quotes in the password.
-      // We also escape backslashes to prevent escape sequence interpretation if necessary, though inside single quotes it's usually fine.
-      const safePassword = (vm.password || '').replace(/\\/g, '\\\\').replace(/'/g, "'\\''");
+      const safePassword = (vm.password || '').replace(/'/g, "'\\''");
       const finalCommand = command.replace(/{{PASSWORD}}/g, safePassword);
   
       conn.on('ready', () => {

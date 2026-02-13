@@ -1,13 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useVMStore } from '../store/vmStore';
 import { useEnvStore } from '../store/envStore';
-import { useSocket } from '../hooks/useSocket';
 import { Play, Terminal as TerminalIcon, RotateCcw } from 'lucide-react';
 
 export const CommandExecutor: React.FC = () => {
-  // Use custom hook for WebSocket connection
-  useSocket();
-
   // Split store selectors to avoid re-renders when unrelated state changes
   // Only subscribe to what we need for rendering logs and active terminal
   const logs = useVMStore(state => state.logs);
@@ -20,6 +16,8 @@ export const CommandExecutor: React.FC = () => {
   
   // Actions (stable)
   const setActiveTerminalVmId = useVMStore(state => state.setActiveTerminalVmId);
+  const addLog = useVMStore(state => state.addLog);
+  const updateStatus = useVMStore(state => state.updateStatus);
   const clearLogs = useVMStore(state => state.clearLogs);
 
   const { environments, selectedEnvId } = useEnvStore();
@@ -43,6 +41,60 @@ export const CommandExecutor: React.FC = () => {
 
   const [isExecuting, setIsExecuting] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Determine WS URL dynamically to support remote deployments
+    // We connect through the Nginx proxy (same host/port) using the /api/ path
+    const apiUrl = import.meta.env.VITE_API_URL;
+    let wsUrl: string;
+
+    if (apiUrl) {
+      const url = new URL(apiUrl);
+      const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+      wsUrl = `${protocol}//${url.host}/api/`;
+    } else {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host; // Includes hostname and port
+      wsUrl = `${protocol}//${host}/api/`;
+    }
+    
+    console.log(`Connecting to WebSocket at: ${wsUrl}`);
+    const ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+      console.log('WebSocket connection established');
+      addLog({ vmId: 'system', type: 'info', data: '>>> Connected to backend terminal server.\n', timestamp: Date.now() });
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const { type, payload } = JSON.parse(event.data);
+        if (type === 'output') {
+          addLog({ ...payload, timestamp: Date.now() });
+        } else if (type === 'status') {
+          updateStatus(payload);
+        }
+      } catch (error) {
+        console.error('Failed to process WebSocket message:', error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      addLog({ vmId: 'system', type: 'error', data: '>>> Connection error. Unable to reach terminal server.\n', timestamp: Date.now() });
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket connection closed');
+      addLog({ vmId: 'system', type: 'info', data: '>>> Connection lost. Trying to reconnect...\n', timestamp: Date.now() });
+    };
+
+    return () => {
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        ws.close();
+      }
+    };
+  }, [addLog, updateStatus]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -89,9 +141,9 @@ export const CommandExecutor: React.FC = () => {
           <button
             onClick={handleExecute}
             disabled={isExecuting || selectedVmIds.length === 0}
-            className="flex items-center gap-2 px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-800 disabled:text-zinc-500 rounded transition-colors whitespace-nowrap"
+            className="flex items-center gap-2 px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-800 disabled:text-zinc-500 rounded transition-colors"
           >
-            <Play size={16} /> {isExecuting ? 'Running...' : `Run (${selectedVmIds.length})`}
+            <Play size={16} /> {isExecuting ? 'Running...' : `Run on ${selectedVmIds.length} VMs`}
           </button>
         </div>
       </div>
